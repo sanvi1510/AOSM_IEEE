@@ -1,11 +1,16 @@
 import os
 import re
 import fitz  # PyMuPDF
-from flask import Flask, request, jsonify
+# UPDATED imports to include render_template
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+import pytesseract
+from pdf2image import convert_from_bytes
+from PIL import Image
+import shutil
 
 # --- 1. CONFIGURATION ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -13,9 +18,18 @@ if not GROQ_API_KEY:
     print("FATAL: GROQ_API_KEY environment variable not set. Please configure it.")
     exit()
 
-# Initialize Flask App
-app = Flask(__name__)
+# UPDATED: Initialize Flask to serve frontend files from templates/ and static/
+app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
+
+# --- Tesseract OCR Check ---
+def is_tesseract_available():
+    """Check if Tesseract is installed and in the system's PATH."""
+    return shutil.which("tesseract") is not None
+
+TESSERACT_AVAILABLE = is_tesseract_available()
+if not TESSERACT_AVAILABLE:
+    print("WARNING: Tesseract-OCR not found in system PATH. OCR functionality for scanned PDFs will be disabled.")
 
 # --- 2. LLM AND PROMPT SETUP ---
 llm = ChatGroq(
@@ -53,28 +67,44 @@ Now, generate the questions.
 mcq_chain = mcq_prompt | llm | StrOutputParser()
 
 # --- 3. HELPER FUNCTIONS ---
+
+def perform_ocr_on_pdf(pdf_bytes):
+    """
+    Performs OCR on a PDF file's bytes to extract text.
+    """
+    if not TESSERACT_AVAILABLE:
+        print("OCR skipped: Tesseract is not available.")
+        return ""
+        
+    print("Performing OCR on the document...")
+    try:
+        images = convert_from_bytes(pdf_bytes, dpi=300)
+        full_text = ""
+        for i, image in enumerate(images):
+            print(f"Processing page {i+1}/{len(images)} with OCR...")
+            full_text += pytesseract.image_to_string(image) + "\n"
+        print("OCR processing finished.")
+        return full_text
+    except Exception as e:
+        print(f"An error occurred during OCR: {e}")
+        return ""
+
+
 def parse_mcq_text(mcq_text):
     """
-    Final parser with a non-greedy regex that correctly handles the end of the explanation.
+    Parses the structured text output from the LLM into a list of question dictionaries.
     """
     questions = []
-    
-    # =================== THIS REGEX IS THE ONLY PART THAT CHANGED ===================
     pattern = re.compile(
-        # Match the question line
         r"Question\s*\d*\s*:{0,1}\s*(?P<question>.+?)\s*"
-        # Match all four options
         r"A\)\s*(?P<optA>.+?)\s*"
         r"B\)\s*(?P<optB>.+?)\s*"
         r"C\)\s*(?P<optC>.+?)\s*"
         r"D\)\s*(?P<optD>.+?)\s*"
-        # Match the correct answer line
         r"Correct Answer:\s*(?P<answer_letter>[A-D])\s*"
-        # Match the explanation, but make it non-greedy (.+?) and stop before the next "Question:" or the end of the string
         r"Explanation:\s*(?P<explanation>.+?)(?=\n\s*Question|\Z)",
         re.DOTALL | re.IGNORECASE
     )
-    # ===============================================================================
 
     cleaned_text = re.sub(r'\*\*', '', mcq_text)
     matches = pattern.finditer(cleaned_text)
@@ -83,9 +113,9 @@ def parse_mcq_text(mcq_text):
         try:
             data = match.groupdict()
             options = [
-                data['optA'].strip(), 
-                data['optB'].strip(), 
-                data['optC'].strip(), 
+                data['optA'].strip(),
+                data['optB'].strip(),
+                data['optC'].strip(),
                 data['optD'].strip()
             ]
             
@@ -106,8 +136,22 @@ def parse_mcq_text(mcq_text):
     print(f"Successfully parsed {len(questions)} questions with explanations.")
     return questions
 
+# --- 4. API ENDPOINTS ---
 
-# --- 4. MAIN API ENDPOINT ---
+# ADDED: This route serves your main HTML page
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Frontend endpoint to check for OCR capability."""
+    return jsonify({
+        "ocr_available": TESSERACT_AVAILABLE,
+        "tesseract_version": pytesseract.get_tesseract_version().strip() if TESSERACT_AVAILABLE else None,
+        "error": "Tesseract-OCR executable not found in PATH." if not TESSERACT_AVAILABLE else None
+    })
+
 @app.route('/generate-quiz', methods=['POST'])
 def generate_quiz():
     if 'file' not in request.files:
@@ -119,17 +163,27 @@ def generate_quiz():
 
     if file:
         try:
-            doc = fitz.open(stream=file.read(), filetype="pdf")
-            text = "".join(page.get_text() for page in doc)
-            doc.close()
+            pdf_bytes = file.read()
+            text = ""
+
+            print("Attempting direct text extraction with PyMuPDF...")
+            with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                text = "".join(page.get_text() for page in doc)
+
+            if len(text.strip()) < 100 and TESSERACT_AVAILABLE:
+                print("Direct extraction yielded little text. Falling back to OCR.")
+                text = perform_ocr_on_pdf(pdf_bytes)
+            elif len(text.strip()) < 100 and not TESSERACT_AVAILABLE:
+                 print("Direct extraction failed, and OCR is not available. Cannot process file.")
+                 return jsonify({"error": "Could not extract text from this PDF, and the OCR engine is not available. The file might be an image-only PDF."}), 400
 
             if not text.strip():
-                return jsonify({"error": "Could not extract text from PDF."}), 400
+                return jsonify({"error": "Could not extract text from the PDF, even after attempting OCR."}), 400
 
             num_questions = int(request.form.get('num_questions', 5))
             difficulty = request.form.get('difficulty', 'Medium')
             
-            print(f"Generating {num_questions} {difficulty} questions from text...")
+            print(f"Generating {num_questions} {difficulty} questions from extracted text...")
             shortened_text = text[:12000]
 
             llm_output = mcq_chain.invoke({
@@ -149,7 +203,7 @@ def generate_quiz():
             return jsonify({"questions": questions})
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An unexpected error occurred: {e}")
             return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
     return jsonify({"error": "Invalid file type"}), 400

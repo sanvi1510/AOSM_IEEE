@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI MCQ Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="background-blob blob1"></div>
+    <div class="background-blob blob2"></div>
+
+    <div class="app-container">
+        <div class="wizard-step" id="step-1-upload">
+            <div class="step-header">
+                <i class="fa-solid fa-brain fa-2x"></i>
+                <h1>AI MCQ Generator</h1>
+                <p>Turn any document into an interactive quiz.</p>
+            </div>
+            <div class="step-content">
+                <form id="upload-form">
+                    <label for="pdf-file" class="file-label">
+                        <i class="fa-solid fa-file-arrow-up fa-3x"></i>
+                        <span id="file-label-text">Click to choose a PDF file</span>
+                        <input type="file" id="pdf-file" name="file" accept=".pdf">
+                    </label>
+                    <p id="file-name-display"></p>
+                </form>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-2-configure">
+            <div class="step-header">
+                <i class="fa-solid fa-gears fa-2x"></i>
+                <h1>Configure Your Quiz</h1>
+                <p>Set the options for the generated quiz.</p>
+            </div>
+            <div class="step-content">
+                <form id="config-form">
+                    <div class="form-group">
+                        <label for="num-questions">Number of Questions:</label>
+                        <input type="number" id="num-questions" name="num_questions" min="1" max="20" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Difficulty Level:</label>
+                        <div class="difficulty-options">
+                            <label><input type="radio" name="difficulty" value="Easy" checked> Easy</label>
+                            <label><input type="radio" name="difficulty" value="Medium"> Medium</label>
+                            <label><input type="radio" name="difficulty" value="Hard"> Hard</label>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" class="btn-secondary" id="back-to-upload-btn">Back</button>
+                        <button type="submit" class="btn-primary" id="generate-btn">Generate Quiz</button>
+                    </div>
+                </form>
+                <div id="loader-container" style="display: none;">
+                    <div class="loader"></div>
+                    <p>AI is thinking... please wait.</p>
+                </div>
+                <p id="error-message" class="error-text"></p>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-3-quiz">
+             <div id="quiz-header">
+                <h2 id="question-counter"></h2>
+                <div id="timer"><i class="fa-regular fa-clock"></i> 00:00</div>
+            </div>
+            <div id="quiz-content">
+                <p id="question-text"></p>
+                <div id="options-container"></div>
+                <div id="live-explanation" style="display: none;"></div>
+            </div>
+            <button class="btn-primary" id="next-btn">Next Question</button>
+        </div>
+
+        <div class="wizard-step" id="step-4-results">
+            <h2>Quiz Results</h2>
+            <div class="results-summary">
+                <p>Total Questions: <span id="total-questions"></span></p>
+                <p>✅ Correct Answers: <span id="correct-answers"></span></p>
+                <p>❌ Incorrect Answers: <span id="incorrect-answers"></span></p>
+                <p>Final Score: <strong id="final-score"></strong></p>
+            </div>
+            <div class="chart-container">
+                <canvas id="results-chart"></canvas>
+            </div>
+            <div id="review-container"></div>
+            <div class="button-group">
+                <button id="view-flashcards-btn" class="btn-secondary">View Flashcards</button>
+                <button id="restart-btn" class="btn-primary">Create Another Quiz</button>
+            </div>
+        </div>
+
+        <div class="wizard-step" id="step-5-flashcards">
+            <div class="step-header">
+                <i class="fa-solid fa-layer-group fa-2x"></i>
+                <h1>Flashcards</h1>
+                <p>Click a card to flip it. Use the arrows to navigate.</p>
+            </div>
+            <div id="flashcard-container">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <p id="flashcard-question"></p>
+                        </div>
+                        <div class="flashcard-back" id="flashcard-back-content">
+                            </div>
+                    </div>
+                </div>
+            </div>
+            <div id="flashcard-nav">
+                <button id="prev-card-btn" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i></button>
+                <span id="flashcard-counter"></span>
+                <button id="next-card-btn" class="btn-secondary"><i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+            <div class="button-group" style="margin-top: 25px;">
+                 <button id="back-to-results-btn" class="btn-secondary">Back to Results</button>
+                 <button id="download-cards-btn" class="btn-primary">Download Cards (CSV)</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

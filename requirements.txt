@@ -1,9 +1,9 @@
 Flask
 Flask-Cors
-PyMuPDF
 langchain
-langchain_groq
+langchain-google-genai
 python-docx
 pdfplumber
-langchain-core
-gunicorn
+Pillow
+pdf2image
+pytesseract
