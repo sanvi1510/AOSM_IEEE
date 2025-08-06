@@ -1,0 +1,9 @@
+Flask
+Flask-Cors
+PyMuPDF
+langchain
+langchain_groq
+python-docx
+pdfplumber
+langchain-core
+gunicorn
