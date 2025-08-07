@@ -18,8 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const timerDisplay = document.getElementById('timer');
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
-    const nextBtn = document.getElementById('next-btn');
     const liveExplanation = document.getElementById('live-explanation');
+    // UPDATED: Quiz Navigation Buttons
+    const nextQuestionBtn = document.getElementById('next-question-btn');
+    const prevQuestionBtn = document.getElementById('prev-question-btn');
 
     // Results Elements
     const totalQuestionsSpan = document.getElementById('total-questions');
@@ -34,17 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewFlashcardsBtn = document.getElementById('view-flashcards-btn');
     const flashcardContainer = document.getElementById('flashcard-container');
     const flashcard = document.querySelector('.flashcard');
-    const flashcardQuestion = document.getElementById('flashcard-question');
-    const flashcardBackContent = document.getElementById('flashcard-back-content'); // Corrected selector
+    const flashcardBackContent = document.getElementById('flashcard-back-content');
     const prevCardBtn = document.getElementById('prev-card-btn');
     const nextCardBtn = document.getElementById('next-card-btn');
     const flashcardCounter = document.getElementById('flashcard-counter');
     const backToResultsBtn = document.getElementById('back-to-results-btn');
-    const downloadCardsBtn = document.getElementById('download-cards-btn');
+    const downloadCsvBtn = document.getElementById('download-csv-btn');
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
 
     // --- State Variables ---
     let quizData = [];
-    let userAnswers = [];
+    let userAnswers = []; // This will now be a sparse array initially
     let currentQuestionIndex = 0;
     let score = 0;
     let timerInterval;
@@ -118,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(data.error || 'An unknown server error occurred.');
             
             quizData = data.questions;
+            userAnswers = new Array(quizData.length); // Initialize userAnswers array
             localStorage.setItem('quizData', JSON.stringify(quizData));
 
             if (quizData && quizData.length > 0) {
@@ -138,12 +141,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    nextBtn.addEventListener('click', () => {
-        currentQuestionIndex++;
-        if (currentQuestionIndex < quizData.length) {
+    // UPDATED: Quiz navigation listeners
+    nextQuestionBtn.addEventListener('click', () => {
+        if (currentQuestionIndex < quizData.length - 1) {
+            currentQuestionIndex++;
             displayQuestion();
         } else {
-            endQuiz();
+            endQuiz(); // On the last question, this button finishes the quiz
+        }
+    });
+
+    prevQuestionBtn.addEventListener('click', () => {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            displayQuestion();
         }
     });
 
@@ -165,24 +176,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     backToResultsBtn.addEventListener('click', () => showStep(3));
-
-    flashcardContainer.addEventListener('click', () => {
-        flashcard.classList.toggle('flipped');
-    });
-
+    flashcardContainer.addEventListener('click', () => flashcard.classList.toggle('flipped'));
     nextCardBtn.addEventListener('click', () => {
         if (quizData.length === 0) return;
         currentCardIndex = (currentCardIndex + 1) % quizData.length;
         displayFlashcard();
     });
-
     prevCardBtn.addEventListener('click', () => {
         if (quizData.length === 0) return;
         currentCardIndex = (currentCardIndex - 1 + quizData.length) % quizData.length;
         displayFlashcard();
     });
-
-    downloadCardsBtn.addEventListener('click', downloadFlashcards);
+    downloadCsvBtn.addEventListener('click', downloadFlashcardsAsCSV);
+    downloadPdfBtn.addEventListener('click', downloadFlashcardsAsPDF);
 
     // --- Main Logic Functions ---
     function resetState() {
@@ -197,29 +203,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startQuiz() {
         resetState();
+        userAnswers = new Array(quizData.length);
         showStep(2);
         startTimer();
         displayQuestion();
     }
 
+    // NEW: Updates the Previous/Next buttons state
+    function updateNavButtons() {
+        prevQuestionBtn.style.display = currentQuestionIndex > 0 ? 'inline-block' : 'none';
+        nextQuestionBtn.textContent = currentQuestionIndex === quizData.length - 1 ? 'Finish & Review' : 'Next Question';
+    }
+    
+    // NEW: Restores the view of a previously answered question
+    function restoreAnswerState() {
+        const userAnswer = userAnswers[currentQuestionIndex];
+        const correctAnswer = quizData[currentQuestionIndex].answer;
+
+        Array.from(optionsContainer.children).forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('disabled');
+            if (btn.textContent === correctAnswer) {
+                btn.classList.add('correct');
+            }
+            if (btn.textContent === userAnswer && userAnswer !== correctAnswer) {
+                btn.classList.add('incorrect');
+            }
+        });
+
+        if (quizData[currentQuestionIndex].explanation) {
+            liveExplanation.innerHTML = `<div class="explanation-text"><i class="fa-solid fa-lightbulb"></i> Explanation: ${quizData[currentQuestionIndex].explanation}</div>`;
+            liveExplanation.style.display = 'block';
+        }
+    }
+
+    // REFACTORED: displayQuestion now handles both new and previously answered questions
     function displayQuestion() {
         const question = quizData[currentQuestionIndex];
         questionCounter.textContent = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
         questionText.textContent = question.question;
         optionsContainer.innerHTML = '';
         liveExplanation.style.display = 'none';
-        liveExplanation.innerHTML = '';
-        
+
+        const isAnswered = userAnswers[currentQuestionIndex] !== undefined;
+
         question.options.forEach(option => {
             const button = document.createElement('button');
             button.textContent = option;
             button.classList.add('option-btn');
-            button.onclick = (e) => handleOptionSelect(e, option);
+            if (!isAnswered) {
+                button.onclick = (e) => handleOptionSelect(e, option);
+            }
             optionsContainer.appendChild(button);
         });
-        nextBtn.style.display = 'none';
-    }
 
+        if (isAnswered) {
+            restoreAnswerState();
+        }
+
+        updateNavButtons();
+    }
+    
+    // REFACTORED: handleOptionSelect now only deals with the logic of selecting an answer
     function handleOptionSelect(event, selectedOption) {
         userAnswers[currentQuestionIndex] = selectedOption;
         const currentQuestion = quizData[currentQuestionIndex];
@@ -228,7 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
         Array.from(optionsContainer.children).forEach(btn => {
             btn.disabled = true;
             btn.classList.add('disabled');
-            if (btn.textContent === correctAnswer) btn.classList.add('correct');
+            if (btn.textContent === correctAnswer) {
+                btn.classList.add('correct');
+            }
         });
 
         if (selectedOption === correctAnswer) {
@@ -242,13 +289,19 @@ document.addEventListener('DOMContentLoaded', () => {
             liveExplanation.innerHTML = `<div class="explanation-text"><i class="fa-solid fa-lightbulb"></i> Explanation: ${currentQuestion.explanation}</div>`;
             liveExplanation.style.display = 'block';
         }
-
-        nextBtn.textContent = (currentQuestionIndex < quizData.length - 1) ? 'Next Question' : 'Finish & Review';
-        nextBtn.style.display = 'block';
     }
 
     function endQuiz() {
         clearInterval(timerInterval);
+        // Recalculate score based on the final answers array
+        let finalScore = 0;
+        for (let i = 0; i < quizData.length; i++) {
+            if(quizData[i].answer === userAnswers[i]) {
+                finalScore++;
+            }
+        }
+        score = finalScore;
+
         localStorage.setItem('userAnswers', JSON.stringify(userAnswers));
         localStorage.setItem('score', score.toString());
         showStep(3);
@@ -260,11 +313,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!quizData || quizData.length === 0) return;
 
         const totalQuestions = quizData.length;
-        const incorrectAnswers = totalQuestions - score;
-        const percentage = ((score / totalQuestions) * 100).toFixed(2);
+        const correctAnswers = score;
+        const incorrectAnswers = totalQuestions - correctAnswers;
+        const percentage = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100).toFixed(2) : 0;
 
         totalQuestionsSpan.textContent = totalQuestions;
-        correctAnswersSpan.textContent = score;
+        correctAnswersSpan.textContent = correctAnswers;
         incorrectAnswersSpan.textContent = incorrectAnswers;
         finalScoreSpan.textContent = `${percentage}%`;
 
@@ -275,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'pie',
             data: {
                 labels: ['Correct', 'Incorrect'],
-                datasets: [{ data: [score, incorrectAnswers], backgroundColor: ['#22c55e', '#ef4444'], hoverOffset: 4 }]
+                datasets: [{ data: [correctAnswers, incorrectAnswers], backgroundColor: ['#22c55e', '#ef4444'], hoverOffset: 4 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
@@ -287,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayReview() {
         reviewContainer.innerHTML = '<h2>Review Your Answers</h2>';
         quizData.forEach((question, index) => {
-            const userAnswer = userAnswers[index];
+            const userAnswer = userAnswers[index] || "Not Answered"; // Handle unanswered questions
             const isCorrect = userAnswer === question.answer;
             const item = document.createElement('div');
             item.classList.add('review-item');
@@ -296,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <ul>
                     ${question.options.map(option => `
                         <li class="${option === userAnswer ? (isCorrect ? 'highlight-green' : 'highlight-red') : ''} ${option === question.answer ? 'correct-answer-text' : ''}">
-                            ${option} ${option === userAnswer ? '<span class="user-answer">(Your Answer)</span>' : ''}
+                            ${option} ${option === userAnswer ? `<span class="user-answer">(${userAnswer === "Not Answered" ? "Not Answered" : "Your Answer"})</span>` : ''}
                         </li>
                     `).join('')}
                 </ul>
@@ -327,21 +381,21 @@ document.addEventListener('DOMContentLoaded', () => {
         flashcard.classList.remove('flipped');
         
         const card = quizData[currentCardIndex];
+        
         setTimeout(() => {
-            flashcardQuestion.textContent = card.question;
+            document.getElementById('flashcard-question').textContent = card.question;
+            document.getElementById('flashcard-front-explanation').textContent = card.explanation;
             flashcardBackContent.innerHTML = `
                 <div class="flashcard-content-wrapper">
                     <p class="flashcard-answer-title">Answer</p>
-                    <p class="flashcard-answer-text">${card.answer}</p>
-                    <hr class="flashcard-divider">
-                    <p class="flashcard-explanation-text">${card.explanation}</p>
+                    <p class="flashcard-answer-text" style="font-size: 1.8rem;">${card.answer}</p>
                 </div>
             `;
             flashcardCounter.textContent = `${currentCardIndex + 1} / ${quizData.length}`;
         }, 150);
     }
 
-    function downloadFlashcards() {
+    function downloadFlashcardsAsCSV() {
         let csvContent = "data:text/csv;charset=utf-8,";
         csvContent += "Question,Answer,Explanation\n";
 
@@ -355,10 +409,74 @@ document.addEventListener('DOMContentLoaded', () => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "flashcards_with_explanations.csv");
+        link.setAttribute("download", "flashcards.csv");
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    function downloadFlashcardsAsPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width;
+        const margin = 15;
+        const maxLineWidth = pageWidth - margin * 2;
+        let y = margin;
+
+        doc.setFontSize(20);
+        doc.setFont(undefined, 'bold');
+        doc.text("Generated Flashcards", pageWidth / 2, y, { align: 'center' });
+        y += 15;
+
+        quizData.forEach((card, index) => {
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            const questionLines = doc.splitTextToSize(`Q${index + 1}: ${card.question}`, maxLineWidth);
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            const answerLines = doc.splitTextToSize(`Answer: ${card.answer}`, maxLineWidth);
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'italic');
+            const explanationLines = doc.splitTextToSize(card.explanation, maxLineWidth);
+
+            const questionHeight = questionLines.length * 5;
+            const answerHeight = answerLines.length * 5;
+            const explanationHeight = explanationLines.length * 4;
+            const blockHeight = questionHeight + answerHeight + explanationHeight + 15;
+
+            if (y + blockHeight > pageHeight - margin) {
+                doc.addPage();
+                y = margin;
+            }
+
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(questionLines, margin, y);
+            y += questionHeight + 2;
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(answerLines, margin, y);
+            y += answerHeight + 2;
+
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'italic');
+            doc.setTextColor(128, 128, 128);
+            doc.text(explanationLines, margin, y);
+            y += explanationHeight + 10;
+            doc.setTextColor(0, 0, 0);
+
+            if (index < quizData.length - 1) {
+                doc.setDrawColor(220, 220, 220);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 10;
+            }
+        });
+
+        doc.save("flashcards.pdf");
     }
 
     function initializeApp() {

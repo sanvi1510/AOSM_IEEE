@@ -96,13 +96,14 @@ def parse_mcq_text(mcq_text):
     """
     questions = []
     pattern = re.compile(
-        r"Question\s*\d*\s*:{0,1}\s*(?P<question>.+?)\s*"
+        # This regex now broadly finds question blocks
+        r"(?:Question|Q)\s*\d*\s*[:.]*\s*(?P<question>.+?)\s*"
         r"A\)\s*(?P<optA>.+?)\s*"
         r"B\)\s*(?P<optB>.+?)\s*"
         r"C\)\s*(?P<optC>.+?)\s*"
         r"D\)\s*(?P<optD>.+?)\s*"
         r"Correct Answer:\s*(?P<answer_letter>[A-D])\s*"
-        r"Explanation:\s*(?P<explanation>.+?)(?=\n\s*Question|\Z)",
+        r"Explanation:\s*(?P<explanation>.+?)(?=\n\s*(?:Question|Q)|\Z)",
         re.DOTALL | re.IGNORECASE
     )
 
@@ -112,6 +113,21 @@ def parse_mcq_text(mcq_text):
     for match in matches:
         try:
             data = match.groupdict()
+            
+            # --- NEW, MORE ROBUST CLEANING LOGIC ---
+            # Step 1: Get the raw captured question text
+            raw_question = data['question'].strip()
+            
+            # Step 2: Define and remove the specific unwanted prefix
+            garbage_prefix = "s based on the provided text:"
+            if raw_question.lower().startswith(garbage_prefix):
+                 raw_question = raw_question[len(garbage_prefix):].strip()
+
+            # Step 3: The remaining text might still have a "Question X:" part. Remove it.
+            # This ensures the final text starts with the actual question content.
+            final_question = re.sub(r'^(?:Question|Q)\s*\d*\s*[:.]*\s*', '', raw_question, flags=re.IGNORECASE).strip()
+            # --- END NEW CLEANING LOGIC ---
+
             options = [
                 data['optA'].strip(),
                 data['optB'].strip(),
@@ -124,7 +140,7 @@ def parse_mcq_text(mcq_text):
             answer_text = options[answer_index]
 
             questions.append({
-                "question": data['question'].strip(),
+                "question": final_question, # Use the fully cleaned question
                 "options": options,
                 "answer": answer_text,
                 "explanation": data['explanation'].strip()
@@ -138,7 +154,6 @@ def parse_mcq_text(mcq_text):
 
 # --- 4. API ENDPOINTS ---
 
-# ADDED: This route serves your main HTML page
 @app.route('/')
 def index():
     return render_template('index.html')
