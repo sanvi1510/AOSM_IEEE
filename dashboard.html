@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    <div class="step-header">
+        <i class="fa-solid fa-table-columns fa-2x"></i>
+        <h1>{{ current_user.username }}'s Dashboard</h1>
+        <p>Here are the quizzes you've generated.</p>
+    </div>
+    <div class="quiz-list">
+        {% if quizzes %}
+            {% for quiz in quizzes %}
+                <div class="quiz-list-item">
+                    <h3>{{ quiz.title }}</h3>
+                    <p>Generated on: {{ quiz.date_created.strftime('%Y-%m-%d') }}</p>
+                    {% if quiz.is_public %}
+                        <p>🔗 Public Link: 
+                            <a href="{{ url_for('public_quiz', slug=quiz.slug) }}" target="_blank">
+                                {{ url_for('public_quiz', slug=quiz.slug, _external=True) }}
+                            </a>
+                        </p>
+                    {% else %}
+                        <button class="btn-secondary" onclick="makePublic('{{ quiz.id }}')">Make Public</button>
+                        <span id="public-link-{{ quiz.id }}"></span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>You haven't generated any quizzes yet. <a href="{{ url_for('index') }}">Create one now!</a></p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function makePublic(quizId) {
+    fetch(`/make-public/${quizId}`, { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+        const span = document.getElementById(`public-link-${quizId}`);
+        span.innerHTML = `<p>🔗 <a href="${data.public_url}" target="_blank">${data.public_url}</a></p>`;
+    })
+    .catch(() => alert("Failed to make quiz public."));
+}
+</script>
+{% endblock %}
