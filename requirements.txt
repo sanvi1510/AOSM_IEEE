@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 Flask
 Flask-Cors
 langchain
@@ -8,4 +8,5 @@ pytesseract
 pdf2image
 Pillow
 gunicorn
+
 
