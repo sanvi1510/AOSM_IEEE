@@ -8,13 +8,4 @@ pytesseract
 pdf2image
 Pillow
 gunicorn
-=======
-Flask
-Flask-Cors
-langchain
-langchain-groq
-PyMuPDF
-pytesseract
-pdf2image
-Pillow
->>>>>>> fc055229bd3157f25213ae91f30168a91660a55f
+
