@@ -1,4 +1,3 @@
-
 Flask
 Flask-Cors
 langchain
@@ -8,5 +7,6 @@ pytesseract
 pdf2image
 Pillow
 gunicorn
-
-
+Flask-SQLAlchemy
+Flask-Login
+Flask-Bcrypt
