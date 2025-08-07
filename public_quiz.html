@@ -1,0 +1,39 @@
+
+{% extends "base.html" %}
+{% block title %}{{ quiz.title }} - Public Quiz{% endblock %}
+{% block content %}
+<div class="wizard-step active">
+    <div class="step-header">
+        <i class="fa-solid fa-rocket fa-2x"></i>
+        <h1>{{ quiz.title }}</h1>
+        <p>This is a public quiz. Enter your name to begin.</p>
+    </div>
+    <div class="step-content">
+        <input type="text" id="participant-name" placeholder="Your Name" required>
+        <button class="btn-primary" id="start-quiz">Start Quiz</button>
+    </div>
+</div>
+<div class="wizard-step" id="quiz-step">
+    <div id="quiz-header">
+        <h2 id="question-counter"></h2>
+        <div id="timer"><i class="fa-regular fa-clock"></i> 00:00</div>
+    </div>
+    <div id="quiz-content">
+        <p id="question-text"></p>
+        <div id="options-container"></div>
+    </div>
+    <div class="button-group">
+        <button class="btn-secondary" id="prev-question-btn">Previous</button>
+        <button class="btn-primary" id="next-question-btn">Next</button>
+    </div>
+</div>
+<div class="wizard-step" id="score-step">
+    <h2>Results</h2>
+    <p id="final-result"></p>
+    <div id="leaderboard"></div>
+    <a href="/" class="btn-primary">Return to Home</a>
+</div>
+
+<script id="quiz-data-json" type="application/json">{{ questions | tojson | safe }}</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+{% endblock %}
