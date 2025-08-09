@@ -11,35 +11,45 @@
         {% if quizzes %}
             {% for quiz in quizzes %}
                 <div class="quiz-list-item">
-                    <h3>{{ quiz.title }}</h3>
-                    <p>Generated on: {{ quiz.date_created.strftime('%Y-%m-%d') }}</p>
-                    {% if quiz.is_public %}
-                        <p>🔗 Public Link: 
-                            <a href="{{ url_for('public_quiz', slug=quiz.slug) }}" target="_blank">
-                                {{ url_for('public_quiz', slug=quiz.slug, _external=True) }}
-                            </a>
-                        </p>
-                    {% else %}
-                        <button class="btn-secondary" onclick="makePublic('{{ quiz.id }}')">Make Public</button>
-                        <span id="public-link-{{ quiz.id }}"></span>
-                    {% endif %}
+                    <a href="{{ url_for('review_quiz', quiz_id=quiz.id) }}" class="quiz-link-wrapper">
+                        <div>
+                            <h3>{{ quiz.title }}</h3>
+                            <p>Generated on: {{ quiz.date_created.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                    </a>
+                    
+                    <div class="quiz-actions" id="public-link-container-{{ quiz.id }}">
+                        {% if quiz.is_public %}
+                            <p>🔗 Public Link: 
+                                <a href="{{ url_for('public_quiz', slug=quiz.slug) }}" target="_blank">
+                                    {{ url_for('public_quiz', slug=quiz.slug, _external=True) }}
+                                </a>
+                            </p>
+                        {% else %}
+                            <button class="btn-secondary" onclick="makePublic('{{ quiz.id }}', this)">Make Public</button>
+                        {% endif %}
+                    </div>
                 </div>
             {% endfor %}
         {% else %}
-            <p>You haven't generated any quizzes yet. <a href="{{ url_for('index') }}">Create one now!</a></p>
+            <p>You haven't generated any quizzes yet. <a href="{{ url_for('generate_quiz_page') }}">Create one now!</a></p>
         {% endif %}
     </div>
 </div>
 
 <script>
-function makePublic(quizId) {
+function makePublic(quizId, buttonElement) {
     fetch(`/make-public/${quizId}`, { method: 'POST' })
     .then(res => res.json())
     .then(data => {
-        const span = document.getElementById(`public-link-${quizId}`);
-        span.innerHTML = `<p>🔗 <a href="${data.public_url}" target="_blank">${data.public_url}</a></p>`;
+        if (data.public_url) {
+            const container = document.getElementById(`public-link-container-${quizId}`);
+            container.innerHTML = `<p>🔗 Public Link: <a href="${data.public_url}" target="_blank">${data.public_url}</a></p>`;
+        } else {
+            alert(data.error || "Failed to make quiz public.");
+        }
     })
-    .catch(() => alert("Failed to make quiz public."));
+    .catch(() => alert("An error occurred."));
 }
 </script>
 {% endblock %}
