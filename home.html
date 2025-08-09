@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Welcome to AOSM Quizzer{% endblock %}
+{% block content %}
+<div class="home-container">
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>Transform Your Documents into Interactive Quizzes Instantly</h1>
+            <p class="subtitle">Upload any PDF and let our AI generate engaging multiple-choice questions for studying, teaching, or training. It's fast, simple, and effective.</p>
+            <a href="{{ url_for('generate_quiz_page') }}" class="btn-primary hero-cta">Get Started for Free</a>
+        </div>
+        <div class="hero-image">
+            <i class="fa-solid fa-file-lines fa-9x"></i>
+        </div>
+    </section>
+
+    <section class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                <h3>1. Upload PDF</h3>
+                <p>Choose any text-based PDF document from your device.</p>
+            </div>
+            <div class="step">
+                <div class="step-icon"><i class="fa-solid fa-gears"></i></div>
+                <h3>2. Configure</h3>
+                <p>Set the number of questions and the desired difficulty level.</p>
+            </div>
+            <div class="step">
+                <div class="step-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h3>3. Generate</h3>
+                <p>Our AI analyzes the text and creates a unique quiz for you.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <h2>Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="fa-solid fa-robot"></i>
+                <h3>AI-Powered</h3>
+                <p>Leverages advanced language models to create relevant and accurate questions.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fa-brands fa-youtube"></i>
+                <h3>Video Recommendations</h3>
+                <p>Get AI-curated video recommendations based on the topics in your document.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fa-solid fa-share-nodes"></i>
+                <h3>Shareable Quizzes</h3>
+                <p>Generate public links for your quizzes and share them with anyone.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fa-solid fa-layer-group"></i>
+                <h3>Interactive Flashcards</h3>
+                <p>Review questions and answers with our easy-to-use flashcard mode.</p>
+            </div>
+             <div class="feature-card">
+                <i class="fa-solid fa-download"></i>
+                <h3>Export Options</h3>
+                <p>Download your flashcards as a PDF or CSV file for offline studying.</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

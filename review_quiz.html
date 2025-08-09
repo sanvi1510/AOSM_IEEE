@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Review: {{ quiz.title }}{% endblock %}
+{% block content %}
+<div class="dashboard-container">
+    <div class="step-header">
+        <i class="fa-solid fa-file-circle-check fa-2x"></i>
+        <h1>Reviewing: {{ quiz.title }}</h1>
+        <p>Here are the questions and answers for this quiz.</p>
+    </div>
+    <div class="review-list">
+        {% for q in questions %}
+            <div class="review-item" style="margin-bottom: 20px; text-align: left;">
+                <h3>Question {{ loop.index }}: {{ q.question }}</h3>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    {% for option in q.options %}
+                        <li class="{{ 'highlight-green' if option == q.answer else '' }}" style="padding: 10px; border-radius: 6px; margin-bottom: 5px;">
+                            {{ option }}
+                        </li>
+                    {% endfor %}
+                </ul>
+                <div class="explanation-text">
+                    <strong>Explanation:</strong> {{ q.explanation or 'No explanation provided.' }}
+                </div>
+            </div>
+        {% else %}
+            <p>No questions found for this quiz.</p>
+        {% endfor %}
+    </div>
+    <div class="button-group" style="justify-content: center;">
+         <a href="{{ url_for('dashboard') }}" class="btn-secondary" style="max-width: 250px; width: auto;">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
