@@ -1,144 +1,173 @@
 {% extends "base.html" %}
-{% block title %}AOSM MCQ Generator{% endblock %}
+{% block title %}Create a New Quiz{% endblock %}
 {% block content %}
+<form id="quiz-generation-form" method="POST" enctype="multipart/form-data">
 
-{% if current_user.is_authenticated %}
-    <form id="quiz-generation-form" style="display: block;">
-        <div class="wizard-step active" id="step-1-upload" style="padding-top: 50px; padding-bottom: 50px;">
-            <div class="step-header">
-                <h1>AOSM MCQ Generator</h1>
-                <p>Turn any document into an interactive quiz.</p>
-            </div>
-            <div class="step-content">
-                <label for="pdf-file" class="file-label">
-                    <i class="fa-solid fa-file-arrow-up fa-3x"></i>
-                    <span id="file-label-text">Click to choose a PDF file</span>
-                    <input type="file" id="pdf-file" name="file" accept=".pdf" required>
-                </label>
-                <p id="file-name-display"></p>
-            </div>
+    <div class="wizard-step active" id="step-1-upload">
+        <div class="step-header">
+            <i class="fa-solid fa-file-arrow-up fa-2x"></i>
+            <h1>Upload Your Document</h1>
+            <p>Choose a PDF file to generate a quiz from.</p>
         </div>
-        <div class="wizard-step" id="step-2-configure">
-            <div class="step-header">
-                <i class="fa-solid fa-gears fa-2x"></i>
-                <h1>Configure Your Quiz</h1>
-                <p>Set the options for the generated quiz.</p>
-            </div>
-            <div class="step-content">
-                <div class="form-group">
-                    <label for="num-questions">Number of Questions:</label>
-                    <input type="number" id="num-questions" name="num_questions" min="1" max="20" value="5" required>
-                </div>
-                <div class="form-group">
-                    <label>Difficulty Level:</label>
-                    <div class="difficulty-options">
-                        <input type="radio" id="difficulty-easy" name="difficulty" value="Easy" checked>
-                        <label for="difficulty-easy">Easy</label>
-                        <input type="radio" id="difficulty-medium" name="difficulty" value="Medium">
-                        <label for="difficulty-medium">Medium</label>
-                        <input type="radio" id="difficulty-hard" name="difficulty" value="Hard">
-                        <label for="difficulty-hard">Hard</label>
-                    </div>
-                </div>
-                <div class="button-group">
-                    <button type="button" class="btn-secondary" id="back-to-upload-btn">Back</button>
-                    <button type="button" class="btn-primary" id="generate-btn">Generate Quiz</button>
-                </div>
-                <div id="loader-container" style="display: none;">
-                    <div class="loader"></div>
-                    <p>AI is thinking... please wait.</p>
-                </div>
-                <p id="error-message" class="error-text"></p>
-            </div>
+        <div class="form-group">
+            <label for="pdf-file" class="file-label">
+                <i class="fa-solid fa-file-pdf fa-3x"></i>
+                <span id="file-label-text">Click to choose a PDF file</span>
+                <span id="file-name-display"></span>
+            </label>
+            <input type="file" id="pdf-file" name="file" accept=".pdf" required>
         </div>
-    </form>
-
-    <div class="wizard-step" id="step-3-quiz">
-        <div id="quiz-header">
-            <h2 id="question-counter"></h2>
-            <div id="timer"><i class="fa-regular fa-clock"></i> 00:00</div>
+        <div id="upload-loader-container" style="display: none; text-align: center; margin-top: 20px;">
+            <div class="loader"></div>
+            <p>Analyzing document for topics...</p>
         </div>
-        <div id="quiz-content">
-            <p id="question-text"></p>
-            <div id="options-container"></div>
-        </div>
-        <div class="button-group" style="margin-top: 25px;">
-            <button type="button" class="btn-secondary" id="prev-question-btn">Previous</button>
-            <button type="button" class="btn-primary" id="next-question-btn">Next</button>
-        </div>
+        <p id="upload-error-message" class="error-text"></p>
     </div>
 
-    <div class="wizard-step" id="step-4-results">
+    <div class="wizard-step" id="step-2-topics">
         <div class="step-header">
-             <i class="fa-solid fa-square-poll-vertical fa-2x"></i>
-            <h1>Quiz Results</h1>
+            <i class="fa-solid fa-tags fa-2x"></i>
+            <h1>Select Topics</h1>
+            <p>Choose topics to focus on. Select none to use the whole document.</p>
         </div>
-        <div class="results-summary">
-            <p>Total Questions: <span id="total-questions"></span></p>
-            <p>✅ Correct Answers: <span id="correct-answers"></span></p>
-            <p>❌ Incorrect Answers: <span id="incorrect-answers"></span></p>
-            <p>Final Score: <strong id="final-score"></strong></p>
+        <div class="form-group">
+            <div id="topics-container" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                </div>
+             <style>
+                .topic-checkbox { margin-bottom: 10px; display: block; }
+                .topic-checkbox input { margin-right: 8px; }
+            </style>
         </div>
-        <div class="chart-container">
-            <canvas id="results-chart"></canvas>
-        </div>
-        <div id="review-container"></div>
         <div class="button-group">
-            <button type="button" id="view-flashcards-btn" class="btn-secondary">View Flashcards</button>
-            <button type="button" id="restart-btn" class="btn-primary">Create Another Quiz</button>
+            <button type="button" id="back-to-upload-btn" class="btn-secondary">Back</button>
+            <button type="button" id="go-to-configure-btn" class="btn-primary">Next</button>
         </div>
     </div>
-    
-    <div class="wizard-step" id="step-5-flashcards">
+
+    <div class="wizard-step" id="step-3-configure">
         <div class="step-header">
-            <i class="fa-solid fa-layer-group fa-2x"></i>
-            <h1>Flashcards</h1>
-            <p>Click a card to flip it. Use the arrows to navigate.</p>
+            <i class="fa-solid fa-gears fa-2x"></i>
+            <h1>Configure Your Quiz</h1>
+            <p>Set the number of questions and difficulty level.</p>
         </div>
-        <div id="flashcard-container">
-            <div class="flashcard">
-                <div class="flashcard-inner">
-                    <div class="flashcard-front">
-                        <div style="text-align: left; width: 100%;">
-                            <p id="flashcard-question"></p>
-                            <hr>
-                            <p><strong>Explanation</strong></p>
-                            <p id="flashcard-front-explanation" style="font-style: normal;"></p>
-                        </div>
+        <div class="form-group">
+            <label for="num-questions">Number of Questions</label>
+            <input type="number" id="num-questions" name="num_questions" value="5" min="1" max="20" required>
+        </div>
+        <div class="form-group">
+            <label>Difficulty</label>
+            <div class="difficulty-options">
+                <input type="radio" id="easy" name="difficulty" value="Easy">
+                <label for="easy">Easy</label>
+                <input type="radio" id="medium" name="difficulty" value="Medium" checked>
+                <label for="medium">Medium</label>
+                <input type="radio" id="hard" name="difficulty" value="Hard">
+                <label for="hard">Hard</label>
+            </div>
+        </div>
+        <div class="button-group">
+            <button type="button" id="back-to-topics-btn" class="btn-secondary">Back</button>
+            <button type="button" id="generate-btn" class="btn-primary">Generate Quiz</button>
+        </div>
+        <div id="loader-container" style="display: none; text-align: center; margin-top: 20px;">
+            <div class="loader"></div>
+            <p>Generating your quiz... This might take a moment.</p>
+        </div>
+        <p id="error-message" class="error-text"></p>
+    </div>
+</form>
+
+<div class="wizard-step" id="step-4-quiz">
+    <div id="quiz-header">
+        <h2 id="question-counter"></h2>
+        <div id="timer"><i class="fa-regular fa-clock"></i> 00:00</div>
+    </div>
+    <div id="quiz-content">
+        <p id="question-text"></p>
+        <div id="options-container"></div>
+    </div>
+    <div class="button-group">
+        <button class="btn-secondary" id="prev-question-btn" style="display: none;">Previous</button>
+        <button class="btn-primary" id="next-question-btn">Next</button>
+    </div>
+</div>
+
+<div class="wizard-step" id="step-5-results">
+    <div class="step-header">
+        <i class="fa-solid fa-square-poll-vertical fa-2x"></i>
+        <h1>Quiz Results</h1>
+    </div>
+
+    <div class="results-summary">
+        <p>Total Questions: <span id="total-questions">0</span></p>
+        <p>Correct Answers: <span id="correct-answers" class="correct-answer-text">0</span></p>
+        <p>Incorrect Answers: <span id="incorrect-answers" class="user-answer">0</span></p>
+        <p><strong>Final Score: <span id="final-score">0%</span></strong></p>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="results-chart"></canvas>
+    </div>
+
+    <div id="review-slider">
+        <div class="review-slider-header">
+            <h2>Review Your Answers</h2>
+            <div class="review-nav">
+                <button id="review-prev-btn" class="btn-secondary" disabled>&lt;</button>
+                <span id="review-counter">1 / 1</span>
+                <button id="review-next-btn" class="btn-secondary">&gt;</button>
+            </div>
+        </div>
+        <div class="review-slider-viewport">
+            <div id="review-container">
+                </div>
+        </div>
+    </div>
+
+    <div id="recommendations-section" style="display: none; margin-top: 40px;">
+        <div class="review-slider-header">
+            <h2><i class="fa-brands fa-youtube" style="color: #FF0000;"></i> Recommended Videos</h2>
+        </div>
+        <div id="recommendations-container" class="recommendations-grid">
+            </div>
+    </div>
+
+    <div class="button-group">
+        <button type="button" id="view-flashcards-btn" class="btn-secondary">View Flashcards</button>
+        <button type="button" id="restart-btn" class="btn-primary">Create Another Quiz</button>
+    </div>
+</div>
+
+<div class="wizard-step" id="step-6-flashcards">
+    <div class="step-header">
+        <i class="fa-solid fa-layer-group fa-2x"></i>
+        <h1>Flashcards</h1>
+        <p>Review the questions and answers.</p>
+    </div>
+    <div id="flashcard-container">
+        <div class="flashcard">
+            <div class="flashcard-inner">
+                <div class="flashcard-front">
+                    <div>
+                        <p id="flashcard-question"></p>
+                        <p id="flashcard-front-explanation" class="explanation-text"></p>
                     </div>
-                    <div class="flashcard-back" id="flashcard-back-content">
-                    </div>
+                </div>
+                <div class="flashcard-back">
+                    <p id="flashcard-back-content"></p>
                 </div>
             </div>
         </div>
-        <div id="flashcard-nav">
-            <button type="button" id="prev-card-btn" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i></button>
-            <span id="flashcard-counter"></span>
-            <button type="button" id="next-card-btn" class="btn-secondary"><i class="fa-solid fa-arrow-right"></i></button>
-        </div>
-        <div class="button-group" style="margin-top: 25px;">
-            <button type="button" id="back-to-results-btn" class="btn-secondary">Back to Results</button>
-            <button type="button" id="download-csv-btn" class="btn-primary">Download (CSV)</button>
-            <button type="button" id="download-pdf-btn" class="btn-primary" style="background-color: #ef4444;">Download (PDF)</button>
-        </div>
     </div>
-
-{% else %}
-    <div class="wizard-step active" id="step-login-prompt" style="padding-top: 50px; padding-bottom: 50px;">
-        <div class="step-header">
-            <h1>AOSM MCQ Generator</h1>
-            <p>Turn any document into an interactive quiz.</p>
-        </div>
-        <div class="step-content" style="text-align: center; padding: 40px 20px;">
-            <i class="fa-solid fa-lock fa-3x" style="color: var(--primary-color); margin-bottom: 20px;"></i>
-            <h2 style="margin-bottom: 15px;">Please log in to create a quiz.</h2>
-            <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 30px;">Creating and saving quizzes requires an account. It's free and only takes a moment!</p>
-            <div class="button-group" style="display: flex; justify-content: center; gap: 20px;">
-                <a href="{{ url_for('login') }}" class="btn-primary">Login</a>
-                <a href="{{ url_for('register') }}" class="btn-secondary">Register</a>
-            </div>
-        </div>
+    <div id="flashcard-nav">
+        <button id="prev-card-btn" class="btn-secondary">&lt; Previous</button>
+        <span id="flashcard-counter">1 / 1</span>
+        <button id="next-card-btn" class="btn-secondary">Next &gt;</button>
     </div>
-{% endif %}
-
+    <div class="button-group">
+        <button type="button" id="download-csv-btn" class="btn-secondary">Download CSV</button>
+        <button type="button" id="download-pdf-btn" class="btn-secondary">Download PDF</button>
+        <button type="button" id="back-to-results-btn" class="btn-primary">Back to Results</button>
+    </div>
+</div>
 {% endblock %}
