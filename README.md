@@ -1,2 +1,2 @@
 # AOSM_IEEE 
-There is no information to update in the provided README content as the code change analysis does not affect the documentation. The change mentioned is related to the HTML of the login page, which is not reflected in the given README.
+The project's home page has been updated with a new subtitle that reads: let our AI generate engaging multiple-choice questions for studying, teaching, or training. It's fast, simple, and effective.
