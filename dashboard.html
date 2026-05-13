@@ -13,7 +13,7 @@
                 <div class="quiz-list-item">
                     <a href="{{ url_for('review_quiz', quiz_id=quiz.id) }}" class="quiz-link-wrapper">
                         <div>
-                            <h3>{{ quiz.title }}</h3>
+                            <h3>{{ QUIZ }}</h3>
                             <p>Generated on: {{ quiz.date_created.strftime('%Y-%m-%d') }}</p>
                         </div>
                     </a>
@@ -32,7 +32,7 @@
                 </div>
             {% endfor %}
         {% else %}
-            <p>You haven't generated any quizzes yet. <a href="{{ url_for('generate_quiz_page') }}">Create one now!</a></p>
+            <p>NO QUIZ GENERATED. <a href="{{ url_for('generate_quiz_page') }}">Create one now!</a></p>
         {% endif %}
     </div>
 </div>
