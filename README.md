@@ -1,2 +1,1 @@
-# AOSM_IEEE 
-The project's home page has been updated with a new subtitle that reads: let our AI generate engaging multiple-choice questions for studying, teaching, or training. It's fast, simple, and effective.
+
